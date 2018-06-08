@@ -7134,7 +7134,7 @@ static OSStatus SSLWriteFunction(SSLConnectionRef connection, const void *data, 
     {
         CFArrayRef protocols = (__bridge CFArrayRef)value;
 
-        if (@available(iOS 11.0, macOS 10.13, *)) {
+        if (@available(iOS 11.0, macOS 10.13.4, *)) {
             status = SSLSetALPNProtocols(sslContext, protocols);
             if (status != noErr)
             {
