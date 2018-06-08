@@ -6900,7 +6900,7 @@ static OSStatus SSLWriteFunction(SSLConnectionRef connection, const void *data, 
 	//  7. GCDAsyncSocketSSLSessionOptionSendOneByteRecord
 	//  8. GCDAsyncSocketSSLCipherSuites
 	//  9. GCDAsyncSocketSSLDiffieHellmanParameters (Mac)
-    // 10. GCDAsyncSocketSSLALPN
+    // 10. GCDAsyncSocketSSLALPN (Mac 10.13+, iOS 11+)
 	//
 	// Deprecated (throw error):
 	// 11. kCFStreamSSLAllowsAnyRoot
@@ -7127,25 +7127,32 @@ static OSStatus SSLWriteFunction(SSLConnectionRef connection, const void *data, 
 	}
 	#endif
     
-    
-    // 10. kCFStreamSSLCertificates
-    
+    // 10. GCDAsyncSocketSSLALPN
+
     value = [tlsSettings objectForKey:GCDAsyncSocketSSLALPN];
     if ([value isKindOfClass:[NSArray class]])
     {
         CFArrayRef protocols = (__bridge CFArrayRef)value;
-        
-        status = SSLSetALPNProtocols(sslContext, protocols);
-        if (status != noErr)
-        {
-            [self closeWithError:[self otherError:@"Error in SSLSetALPNProtocols"]];
+
+        if (@available(iOS 11.0, macOS 10.13, *)) {
+            status = SSLSetALPNProtocols(sslContext, protocols);
+            if (status != noErr)
+            {
+                [self closeWithError:[self otherError:@"Error in SSLSetALPNProtocols"]];
+                return;
+            }
+        } else {
+            NSAssert(NO, @"Security option unavailable - GCDAsyncSocketSSLALPN"
+                     @" - iOS 11.0, macOS 10.13 required");
+
+            [self closeWithError:[self otherError:@"Security option unavailable - GCDAsyncSocketSSLALPN"]];
             return;
         }
     }
     else if (value)
     {
         NSAssert(NO, @"Invalid value for GCDAsyncSocketSSLALPN. Value must be of type NSArray.");
-        
+
         [self closeWithError:[self otherError:@"Invalid value for GCDAsyncSocketSSLALPN."]];
         return;
     }
